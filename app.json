@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "AirBox",
+    "slug": "airbox",
+    "version": "1.0.0",
+    "newArchEnabled": true,
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.airbox.offline"
+    },
+    "android": {
+      "package": "com.airbox.offline",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.0"
+          }
+        }
+      ]
+    ]
+  }
+}

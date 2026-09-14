@@ -1,0 +1,60 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Restore bundled offline AI model
+        run: |
+          cat assets/models/lfm2_5_350m_xnnpack_8w4da.parts/part-* > assets/models/lfm2_5_350m_xnnpack_8w4da.pte
+          EXPECTED="$(tr -d '\r\n' < assets/models/lfm2_5_350m_xnnpack_8w4da.pte.sha256)"
+          ACTUAL="$(shasum -a 256 assets/models/lfm2_5_350m_xnnpack_8w4da.pte | awk '{print $1}')"
+          test "$ACTUAL" = "$EXPECTED"
+
+      - name: Generate native iOS project
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install CocoaPods
+        run: cd ios && pod install --repo-update
+
+      - name: Build unsigned Release app
+        run: |
+          xcodebuild \
+            -workspace ios/AirBox.xcworkspace \
+            -scheme AirBox \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP="$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP"
+          mkdir Payload
+          cp -R "$APP" Payload/
+          /usr/bin/zip -qry AirBox-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AirBox-unsigned-ipa
+          path: AirBox-unsigned.ipa
+          if-no-files-found: error
